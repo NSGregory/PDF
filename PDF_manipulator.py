@@ -13,12 +13,6 @@ class RenamePDF:
         self.path=path
         self.destination=destination
         self.fail_path=fail
-        self.pdf_list_as_path=self.pdfs()
-        self.doi_list=[self.get_doi(x) for x in self.pdf_list_as_path]
-        self.pdf_info=[self.info(x) for x in self.pdf_list_as_path]
-        self.meta_list=[self.get_crossref_metadata(x) for x in self.doi_list]
-        self.bibtex_entries=[self.make_bibtex_entries(x) for x in self.meta_list]
-        self.final_titles=[self.make_titles(x) for x in self.bibtex_entries]
 
     def info(self, filename):
         """
@@ -86,7 +80,7 @@ class RenamePDF:
             print("error getting page1")
 
     def extract_all_text(self, path, doi_only=False):
-        print(doi_only)
+        #print(doi_only)
         text=[]
         try:
             with open(path, 'rb') as f:
@@ -99,7 +93,8 @@ class RenamePDF:
                 else:
                     for page in pdf.pages:
                         text.append(page.extractText())
-                return text
+                    string_text = "".join(text)
+                return string_text
         except:
             print("error getting the file open or something")
 
@@ -107,7 +102,7 @@ class RenamePDF:
         print(path)
         initial_test_string=["doi", "DOI", "doi:", "DOI:"]
         exclude_doi_source=["zenodo"] #alternative doi publishers that don't work with crossref
-        text=[]
+        text= self.extract_all_text(path)
         doi=None
         m = False
         # single_pattern =["(?:https?://.{0,5})" +  # Look for possible https and "doi" versus "dx.doi"
@@ -121,68 +116,21 @@ class RenamePDF:
         spec_pattern_list=["\S+sciadv.\d+", "\S+nature+\d+", "\S+/science\.\S+","DOI: \S+/science\.\S+"]
 
         pattern_list = ["DOI:.*", "DOI: .*", "doi:.*", "doi: .*", "https://doi\.org.*"]
-        if True:
-        #try:
-            with open(path, 'rb') as f:
-                #print(path)
-                pdf=PdfFileReader(f)
-                for page in pdf.pages:
-                    #print("For Page")
-                    extracted_text = page.extractText()
-                    #print(extracted_text)
-                    #Tries to be specific by identifying the page first, not sure if necessary
-                    #May be more useful if there are issues with the reference section has a lot of DOIs?
-                    #This likely can be cleaned up but was needed for iterating through errors in the code
-                    if any(n in extracted_text for n in initial_test_string):
-                        #print("Any initial test string")
-                        #print(f"appending on {path}")
-                        text.append(extracted_text)
-                        print(text)
-                        #print(f"x: {x}")
+        for pattern in single_pattern:
+            result = re.search(pattern, text, re.IGNORECASE)
+            if result != None:
+                doi=result[0]
+                if any(n in doi for n in exclude_doi_source):
+                    doi=None
 
-                text = "".join(text)
-                print(text)
-                for pattern in single_pattern:
-                    #print("pattern list")
-                    print(pattern)
-                    result = re.search(pattern, text, re.IGNORECASE)
-                    #print(result[0])
-                    #if re.search(pattern, text[0], re.IGNORECASE):
-                    #print(result[0])
-                    if result != None:
-                        #print(result[0])
-                        #print("if re.search")
-                        print(result)
-                        doi=result[0]
-                        if any(n in doi for n in exclude_doi_source):
-                            doi=None
-                        #print(f"doi={doi}")
-                #print(text)
-                #print(f"path:{path}"+str(len(text)))
-                #if the specific way fails
-                #this section is likely not needed at all as the for pattern in pattern_list loop likely covers it
-                if len(text) == 0 or doi==None:
-                    print("not specific")
-                    #pdf=PdfFileReader(f)
-                    text=[]
-                    for page in pdf.pages:
-                        x = page.extractText()
-                        text.append(x)
-                    text= "\n".join(text)
-                    print(text)
-                    for pattern in spec_pattern_list:
-                        print(pattern)
-                        result = re.search(pattern, text, re.IGNORECASE)
-                        if result != None:
-                            doi=result[0]
-                            print(f"result: {result[0]}")
+        if doi==None:
+            for pattern in spec_pattern_list:
+                result = re.search(pattern, text, re.IGNORECASE)
+                if result != None:
+                    doi=result[0]
 
-                print(doi)
-                return doi
-        #except:
-        #    print("error getting the file open or something")
-        #    shutil.move(path, self.fail_path)
-        #    print(f"{path} moved to {self.fail_path}")
+        return doi
+
 
     def get_crossref_metadata(self, doi):
         if doi == None:
@@ -209,7 +157,7 @@ class RenamePDF:
         else:
             print("maybe the doi is malformed?")
             return None
-        print(url)
+        #print(url)
         #the headers here determine what kind of output you get from Crossref.org
         #this method ultimately requires that you be online and depend on
         #crossref.org to continue to provide the service
@@ -281,6 +229,15 @@ class RenamePDF:
         :param Path source: source of file to be moved
         :param Path destination_path: path to destination directory
         """
+
+
+        self.pdf_list_as_path=self.pdfs()
+        self.doi_list=[self.get_doi(x) for x in self.pdf_list_as_path]
+        self.pdf_info=[self.info(x) for x in self.pdf_list_as_path]
+        self.meta_list=[self.get_crossref_metadata(x) for x in self.doi_list]
+        self.bibtex_entries=[self.make_bibtex_entries(x) for x in self.meta_list]
+        self.final_titles=[self.make_titles(x) for x in self.bibtex_entries]
+
         if None in self.final_titles:
             return None
 
@@ -305,6 +262,9 @@ class RenamePDF:
 
                 #return self.destination / final_name
             shutil.move(file, new_name)
+
+class GetImages:
+    pass
 
 # if __name__ == '__main__':
 #

@@ -24,8 +24,8 @@ if batch_rename == False:
     for file in os.listdir(source_path):
         print(file)
         if file.endswith(".pdf"):
-            #while True:
-            try:
+            if True:
+            #try:
                 pdf=RenamePDF(source_path+file, destination_path, fail_path)
                 pdf.rename()
                 if os.path.exists(source_path+file):
@@ -34,7 +34,7 @@ if batch_rename == False:
                         shutil.move(source_path+file, fail_path+file+"1")
                     else:
                         shutil.move(source_path+file, fail_path)
-            except:
-                print("Error renaming the PDF")
+            #except:
+            #    print("Error renaming the PDF")
         else:
             print(f"File '{file}' does not appear to be a PDF")
