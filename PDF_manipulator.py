@@ -111,12 +111,25 @@ class RenamePDF:
         #                 "(?!Article|Download|Wiley|1Department|Department|$))*" + # Exclude specific strings
         #                 "(?:[a-z0-9]|-\n+?\S+)"] # Wrap around detection -- unclear if this works in practice
         # preserve this single_pattern = ["(?:https?://.{0,5})?doi(?!ng\b)(:?\n)?(?:\.org)?(?:(?:\S)(?!Article|Download|Wiley|$))*(?:[a-z0-9]|-\n+?\S+)"]
-        single_pattern =["(?:https?://.{0,5})?doi(?!ng\b)(:?\n)?(?:\.org)?(?:(\S)(?!Article|Download|Wiley|1Department|Department|$))*(?:[a-z0-9]|-\n+?(?:(\S)(?!Division|$))+)"]
+        #single_pattern =["(?:https?://.{0,5})?doi(?!ng\b)(:?\n)?(?:\.org)?(?:(\S)(?!Article|Download|Wiley|1Department|Department|$))*(?:[a-z0-9]|-\n+?(?:(\S)(?!Division|$))+)"]
+
+        rp = ["(?:https?://.{0,5})?" +  # Https and up to 5 character
+              "doi(?!ng\b)" +           # "doi" but not "doing"
+              "(:?\n)?" +               # possible ":" and/or newline
+              "(?:\.org)?" +            # possible ".org"
+              "(?:(\S)(?!Article|Download|Wiley|1Department|Department|$))*" +
+                                        # all non-whitespace characters
+                                        # but not key words after "?!"
+              "(?:[a-z0-9]|-\n+?" +     # newlines preceded by hyphen
+              "(?:(\S)(?!Division|$))+)"# characters after a "-\n"
+                                        # but not keywords after "?!
+                                        # this seems to consume an extra char
+              ]
         min_pattern_list=["doi:?\w?\S*", "https://.{0,5}doi\.org\S*","\S*(?<=sciadv)\d*"]
         spec_pattern_list=["\S+sciadv.\d+", "\S+nature+\d+", "\S+/science\.\S+","DOI: \S+/science\.\S+"]
 
         pattern_list = ["DOI:.*", "DOI: .*", "doi:.*", "doi: .*", "https://doi\.org.*"]
-        for pattern in single_pattern:
+        for pattern in rp:
             result = re.search(pattern, text, re.IGNORECASE)
             if result != None:
                 doi=result[0]
