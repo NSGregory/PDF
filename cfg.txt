@@ -1,0 +1,7 @@
+$Change this filename to "config.ini"
+$Enter the values you're interested in
+
+[Filepaths]
+source_path = "path/to/files_that_need_renamed"
+destination_path = "path/to/location/for/renamed_files"
+fail_path = "path/to/location/for/files/that_cannot_be_renamed"
