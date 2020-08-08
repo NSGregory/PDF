@@ -39,6 +39,32 @@ class RenamePDF:
             pdfs = [self.path + x for x in file_list if x.endswith(".pdf")]
             return pdfs
 
+    def info(self, filename):
+        """
+        Uses P2PDF2's PdfFileReader function, which is very limited and heavily flawed.
+        The limitation seems to come from the publisher's end who inconsistently use the metadata.
+        This was ultimately abandoned in favor of using DOI.
+
+        :param filename: filname as full path
+        :return: basic info derived from PyPDF2's PdfFileReader function.
+        """
+        try:
+            with open(filename, 'rb') as f:
+                pdf = PdfFileReader(f)
+                info = pdf.getDocumentInfo()
+                number_of_pages = pdf.getNumPages()
+            author = info.author
+            creator = info.creator
+            producer = info.producer
+            subject = info.subject
+            title = info.title
+            return info
+        except:
+            # input(f"Could not open {path}.  Press any key to continue.")
+            f = open("../../SortedFiles/text/pdf/2020/07/PDF_error_log.txt", "a")
+            f.write(filename + "\n")
+            f.close()
+
     def get_first_page(self, path):
         """
         Pulls the first page from the PDF.  This is useful for parsing the
@@ -93,19 +119,22 @@ class RenamePDF:
         #TODO: alter structure so that each doi match then tries crossref
         #TODO: if match is successful, ultimately return the title
         #TODO: if match is unsuccessful, try the next strategy
-
+        #TODO: add searching metadata info for doi tag
 
         print(path)
         initial_test_string = ["doi", "DOI", "doi:", "DOI:"]
         exclude_doi_source = ["zenodo"]  # alternative doi publishers that don't work with crossref
         text = self.extract_all_text(path)
+        if text == None:
+            return None
+
         doi = None
         m = False
         # single_pattern =["(?:https?://.{0,5})" +  # Look for possible https and "doi" versus "dx.doi"
         #                 "?doi(?!ng\b)(?:\.org)/" + #Look for "doi" but not "doing" and possible ".org"
         #                 "?(?:(?:\S|\n)" + # The actual unique identifier for the paper
         #                 "(?!Article|Download|Wiley|1Department|Department|$))*" + # Exclude specific strings
-        #                 "(?:[a-z0-9]|-\n+?\S+)"] # Wrap around detection -- unclear if this works in practice
+        #                 "(?:[a-z0-9]|-\n+?\S+)"] # Wrap around detection if there's a -\n combination
         # preserve this single_pattern = ["(?:https?://.{0,5})?doi(?!ng\b)(:?\n)?(?:\.org)?(?:(?:\S)(?!Article|Download|Wiley|$))*(?:[a-z0-9]|-\n+?\S+)"]
         # single_pattern =["(?:https?://.{0,5})?doi(?!ng\b)(:?\n)?(?:\.org)?(?:(\S)(?!Article|Download|Wiley|1Department|Department|$))*(?:[a-z0-9]|-\n+?(?:(\S)(?!Division|$))+)"]
 
@@ -119,6 +148,8 @@ class RenamePDF:
               "(?:(\S)(?!Article|Download|Wiley|1Department|Department|$))*" +
               # all non-whitespace characters
               # but not key words after "?!"
+              # the keywords approach is probably not sustainable
+              # as they can fail in unique ways for each PDF encountered
               "(?:[a-z0-9]|-\n+?" +  # newlines preceded by hyphen
               "(?:(\S)(?!Division|$))+)"  # characters after a "-\n"
               # but not keywords after "?!
@@ -164,6 +195,8 @@ class RenamePDF:
         doi = doi.replace(" ", "")  # get rid of whitespace
         if "DOI:http://" in doi:
             url = "https://" + doi[11:]
+        elif any(n in doi for n in ["https://dx.doi.org", "http://dx.doi.org"]):
+            url = doi
         elif "https://doi.org" in doi:
             url = doi
         elif any(n in doi for n in ["doi.org/", "DOI.org/"]):
@@ -189,7 +222,7 @@ class RenamePDF:
         headers = {
             'accept': 'text/bibliography; style=bibtex',
         }
-
+        print(f"url: {url}")
         crossref_request = requests.get(url, headers=headers)
         return crossref_request.text
 
@@ -277,7 +310,7 @@ class RenamePDF:
         #TODO: Determine best location of these self.variables
         self.pdf_list_as_path = self.pdfs()
         self.doi_list = [self.get_doi(x) for x in self.pdf_list_as_path]
-        self.pdf_info = [info(x) for x in self.pdf_list_as_path]
+        self.pdf_info = [self.info(x) for x in self.pdf_list_as_path]
         self.meta_list = [self.get_crossref_metadata(x) for x in self.doi_list]
         self.bibtex_entries = [self.make_bibtex_entries(x) for x in self.meta_list]
         self.final_titles = [self.make_titles(x) for x in self.bibtex_entries]
@@ -308,37 +341,17 @@ class RenamePDF:
             shutil.move(file, new_name)
 
 
-def info(self, filename):
-    """
-    Uses P2PDF2's PdfFileReader function, which is very limited and heavily flawed.
-    The limitation seems to come from the publisher's end who inconsistently use the metadata.
-    This was ultimately abandoned in favor of using DOI.
 
-    :param filename: filname as full path
-    :return: basic info derived from PyPDF2's PdfFileReader function.
-    """
-    try:
-        with open(filename, 'rb') as f:
-            pdf = PdfFileReader(f)
-            info = pdf.getDocumentInfo()
-            number_of_pages = pdf.getNumPages()
-        author = info.author
-        creator = info.creator
-        producer = info.producer
-        subject = info.subject
-        title = info.title
-        return info
-    except:
-        # input(f"Could not open {path}.  Press any key to continue.")
-        f = open("../../SortedFiles/text/pdf/2020/07/PDF_error_log.txt", "a")
-        f.write(filename + "\n")
-        f.close()
 
 
 class GetImages:
     #TODO: A function that pulls out all the images from a PDF
     #TODO: Put all those images in a .pptx
     #TODO: Determine if this should be a separate library?
+
+    #Tried: minecart - got Attribute errors, may need reinstall?
+    #Tried: PyMuPDF - didn't export all images
+
     pass
 
 # if __name__ == '__main__':
